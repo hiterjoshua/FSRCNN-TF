@@ -1,4 +1,4 @@
-import tensorflow as tf 
+import tensorflow as tf
 import fsrcnn
 import data_utils
 import run
@@ -12,6 +12,7 @@ import numpy
 from tensorflow.python.client import device_lib
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' #gets rid of avx/fma warning
+os.environ["CUDA_VISIBLE_DEVICES"] = "6"
 
 # TODO: 
 # Overlapping patches
@@ -20,26 +21,31 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' #gets rid of avx/fma warning
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--train', help='Train the model', action="store_true")
-    parser.add_argument('--test', help='Run tests on the model', action="store_true")
-    parser.add_argument('--export', help='Export the model as .pb', action="store_true")
-    parser.add_argument('--fromscratch', help='Load previous model for training',action="store_false")
-    parser.add_argument('--finetune', help='Finetune model on General100 dataset',action="store_true")
+    parser.add_argument('--train', type=str, default=False, help='Train the model')
+    parser.add_argument('--test', type=str, default=True, help='Run tests on the model')
+    parser.add_argument('--export', type=str, default=True, help='Export the model as .pb')
+    parser.add_argument('--load_flag', type=str, default=False, help='Load previous model for training')
+    parser.add_argument('--finetune', type=str, default=False, help='Finetune model on General100 dataset')
     parser.add_argument('--small', help='Run FSRCNN-small', action="store_true")
     
-    parser.add_argument('--scale', type=int, help='Scaling factor of the model', default=2)
-    parser.add_argument('--batch', type=int, help='Batch size of the training', default=1)
-    parser.add_argument('--epochs', type=int, help='Number of epochs during training', default=20)
-    parser.add_argument('--image', help='Specify test image', default="./images/butterfly.png")
+    parser.add_argument('--scale', type=int, help='Scaling factor of the model', default=4)
+    parser.add_argument('--batch', type=int, help='Batch size of the training', default=8)
+    parser.add_argument('--patch_size', type=int, help='cropped patch size of the image', default=128)
+    parser.add_argument('--epochs', type=int, help='Number of epochs during training', default=10)
     parser.add_argument('--lr', type=float, help='Learning_rate', default=0.001)
     parser.add_argument('--d', type=int, help='Variable for d', default=56)
     parser.add_argument('--s', type=int, help='Variable for s', default=12)
     parser.add_argument('--m', type=int, help='Variable for m', default=4)
     
-    parser.add_argument('--traindir', help='Path to train images')
-    parser.add_argument('--finetunedir', help='Path to finetune images')
-    parser.add_argument('--validdir', help='Path to validation images')
-
+    parser.add_argument('--traindir', type=str, default="/data1/datasets/d_realsr_3w/LR/", help='Path to train images')
+    parser.add_argument('--finetunedir', type=str, default='/data1/datasets/d_realsr_3w/', help='Path to finetune images')
+    parser.add_argument('--validdir', type=str, default='./images/', help='Path to validation images')
+    #parser.add_argument('--image', type=str, default="/data1/hukunlei/result/validation/sr_0415", help='Specify test image')
+    parser.add_argument('--image', type=str, default="/data1/hukunlei/result/validation/d_realsr_3w/", help='Specify test image')
+    parser.add_argument('--output_path', type=str, default="/data1/hukunlei/result/output/newfsr-real3w-l1", help='Path to test output')
+    parser.add_argument('--ckpt_path', type=str, default="./CKPT_dir_l1/", help='model output path')\
+    #"./CKPT_dir_l2/" "./CKPT_dir_l1/" "./CKPT_dir_scratch/"          "./CKPT_dir_pretrain/"
+    
     args = parser.parse_args()
 
     # INIT
@@ -63,19 +69,19 @@ if __name__ == "__main__":
         fsrcnn_params = (32, 5, 1)
 
     # Set checkpoint paths for different scales and models
-    ckpt_path = ""
+
     if scale == 2:
-        ckpt_path = "./CKPT_dir/x2/"
+        ckpt_path_pretrain = "./CKPT_dir_pretrain/x2/"
         if small:
-            ckpt_path = "./CKPT_dir/x2_small/"
+            ckpt_path_pretrain = "./CKPT_dir_pretrain/x2_small/"
     elif scale == 3:
-        ckpt_path = "./CKPT_dir/x3/"
+        ckpt_path_pretrain = "./CKPT_dir_pretrain/x3/"
         if small:
-            ckpt_path = "./CKPT_dir/x3_small/"
+            ckpt_path_pretrain = "./CKPT_dir_pretrain/x3_small/"
     elif scale == 4:
-        ckpt_path = "./CKPT_dir/x4/"
+        ckpt_path_pretrain = "./CKPT_dir_pretrain/x4/"
         if small:
-            ckpt_path = "./CKPT_dir/x4_small/"
+            ckpt_path_pretrain = "./CKPT_dir_pretrain/x4_small/"
     else:
         print("Upscale factor scale is not supported. Choose 2, 3 or 4.")
         exit()
@@ -85,7 +91,7 @@ if __name__ == "__main__":
     config.gpu_options.allow_growth = True
 
     # Create run instance
-    run = run.run(config, lr_size, ckpt_path, scale, args.batch, args.epochs, args.lr, args.fromscratch, fsrcnn_params, small, args.validdir)
+    run = run.run(config, lr_size, ckpt_path_pretrain, scale, fsrcnn_params, small, args)
 
     if args.train:
         # if finetune, load model and train on general100
@@ -94,13 +100,14 @@ if __name__ == "__main__":
             augmented_path = "./augmented_general100"
 
         # augment (if not done before) and then load images 
-        data_utils.augment(traindir, save_path=augmented_path)
+        # data_utils.augment(traindir, save_path=augmented_path)
+        #run.train(augmented_path)
 
-        run.train(augmented_path)
+        run.train(args.traindir)
 
     if args.test:
-        run.testFromPb(args.image)
-        #run.test(args.image)
+        #run.testFromPb(args.image)
+        run.test(args.image)
         #run.upscale(args.image)
 
     if args.export:

@@ -1,11 +1,13 @@
 from __future__ import print_function
 
 import cv2
-import tensorflow as tf 
+#import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 import numpy as np 
 import os
 
-def model(x, y, lr_size, scale, batch, lr, (d, s, m)):
+def model(x, y, lr_size, scale, batch, lr, d, s, m):
     """
     Implementation of FSRCNN: http://mmlab.ie.cuhk.edu.hk/projects/FSRCNN.html.
     """
@@ -71,9 +73,13 @@ def model(x, y, lr_size, scale, batch, lr, (d, s, m)):
     # some outputs
     out_nchw = tf.transpose(out, [0, 3, 1, 2], name="NCHW_output")
     psnr = tf.image.psnr(out, y, max_val=1.0)
-    loss = tf.losses.mean_squared_error(out, y)
-    train_op = tf.train.AdamOptimizer(learning_rate=lr).minimize(loss)
+    #l2 Loss
+    # loss = tf.losses.mean_squared_error(out, y)
+    #l1 loss
+    loss = tf.reduce_mean(tf.reduce_sum(10*tf.abs(out - y), reduction_indices=0))
+    loss += 1 - tf.reduce_mean(tf.image.ssim(y, out, max_val=1.0)) #addby hukunlei 20210712
 
+    train_op = tf.train.AdamOptimizer(learning_rate=lr).minimize(loss)
     return out, loss, train_op, psnr
 
 def prelu(_x, name):

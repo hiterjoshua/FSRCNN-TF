@@ -34,6 +34,8 @@ Train:
 Test:\
 `python main.py --test --image /image-path/`
 
+python main.py --test --image ./images/lr.png
+
 Export:\
 `python3 main.py --export`
 

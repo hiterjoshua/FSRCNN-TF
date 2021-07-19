@@ -13,19 +13,24 @@ from tensorflow.python.tools import optimize_for_inference_lib
 from tensorflow.tools.graph_transforms import TransformGraph
 
 class run:
-    def __init__(self, config, lr_size, ckpt_path, scale, batch, epochs, lr, load_flag, fsrcnn_params, smallFlag, validdir):
+    def __init__(self, config, lr_size, ckpt_path_pretrain, scale, fsrcnn_params, small, args):
         self.config = config
         self.lr_size = lr_size
-        self.ckpt_path = ckpt_path
+        self.ckpt_path_pretrain = ckpt_path_pretrain
         self.scale = scale
-        self.batch = batch
-        self.epochs = epochs
-        self.lr = lr
-        self.load_flag = load_flag
+
+        self.batch = args.batch
+        self.epochs = args.epochs
+        self.lr = args.lr
+        self.load_flag = args.load_flag
         self.fsrcnn_params = fsrcnn_params
-        self.smallFlag = smallFlag
-        self.validdir = validdir
-    
+        self.smallFlag = small
+        self.validdir = args.validdir
+        self.output_path = args.output_path
+        self.ckpt_path = args.ckpt_path
+        self.patch_size = args.patch_size
+  
+
     def train(self, imagefolder):
         
         # Create training dataset iterator
@@ -33,7 +38,7 @@ class run:
         train_dataset = tf.data.Dataset.from_generator(generator=data_utils.make_dataset, 
                                                  output_types=(tf.float32, tf.float32), 
                                                  output_shapes=(tf.TensorShape([None, None, 1]), tf.TensorShape([None, None, 1])),
-                                                 args=[image_paths, self.scale])
+                                                 args=[image_paths, self.patch_size])
         train_dataset = train_dataset.padded_batch(self.batch, padded_shapes=([None, None, 1],[None, None, 1]))
         
         # Create validation dataset
@@ -57,7 +62,7 @@ class run:
             print("\nRunning FSRCNN.")
         else:
             print("\nRunning FSRCNN-small.")
-        out, loss, train_op, psnr = fsrcnn.model(LR, HR, self.lr_size, self.scale, self.batch, self.lr, self.fsrcnn_params)
+        out, loss, train_op, psnr = fsrcnn.model(LR, HR, self.lr_size, self.scale, self.batch, self.lr, *self.fsrcnn_params)
         
         # -- Training session
         with tf.Session(config=self.config) as sess:
@@ -68,12 +73,12 @@ class run:
             saver = tf.train.Saver()
             
             # Create check points directory if not existed, and load previous model if specified.
-            if not os.path.exists(self.ckpt_path):
-                os.makedirs(self.ckpt_path)
+            if not os.path.exists(self.ckpt_path_pretrain):
+                os.makedirs(self.ckpt_path_pretrain)
             else:
-                if os.path.isfile(self.ckpt_path + "fsrcnn_ckpt" + ".meta"):
+                if os.path.isfile(self.ckpt_path_pretrain + "fsrcnn_ckpt" + ".meta"):
                     if self.load_flag:
-                        saver.restore(sess, tf.train.latest_checkpoint(self.ckpt_path))
+                        saver.restore(sess, tf.train.latest_checkpoint(self.ckpt_path_pretrain))
                         print("Loaded checkpoint.")
                     if not self.load_flag:
                         print("No checkpoint loaded. Training from scratch.")
@@ -93,12 +98,18 @@ class run:
                         o, l, t, ps = sess.run([out, loss, train_op, psnr], feed_dict={handle: train_val_handle})
                         train_loss += l
                         train_psnr += (np.mean(np.asarray(ps)))
+                        
+                        if step % 1000 == 1:
+                            if not os.path.exists(self.ckpt_path):
+                                os.makedirs(self.ckpt_path)
+                            else:
+                                save_path = saver.save(sess, self.ckpt_path + "fsrcnn_ckpt")  
+                                print("Step nr: [{}/{}] - Loss: {:.5f}".format(step, "?", float(train_loss/step)))
+                        
+                        if step % 100 == 1:
+                            print("Epoch number: [{}/{}] - Loss: {:.5f}".format(e, self.epochs, float(train_loss/step)))
                         step += 1
                         
-                        if step % 10000 == 0:
-                            save_path = saver.save(sess, self.ckpt_path + "fsrcnn_ckpt")  
-                            print("Step nr: [{}/{}] - Loss: {:.5f}".format(step, "?", float(train_loss/step)))
-                    
                     except tf.errors.OutOfRangeError:
                         break
 
@@ -158,67 +169,62 @@ class run:
 
             bicubic_image = cv2.resize(img, None, fx=self.scale, fy=self.scale, interpolation=cv2.INTER_CUBIC)
 
-            cv2.imshow('Original image', img)
-            cv2.imshow('HR image', HR_image)
-            cv2.imshow('Bicubic HR image', bicubic_image)
-            cv2.waitKey(0)
+            # cv2.imshow('Original image', img)
+            # cv2.imshow('HR image', HR_image)
+            # cv2.imshow('Bicubic HR image', bicubic_image)
+            # cv2.waitKey(0)
         sess.close()
 
     def test(self, path):
         """
         Test single image and calculate psnr.
         """
-        fullimg = cv2.imread(path, 3)
-        width = fullimg.shape[0]
-        height = fullimg.shape[1]
+        # load the model
+        ckpt_name = self.ckpt_path + "fsrcnn_ckpt" + ".meta"
 
-        cropped = fullimg[0:(width - (width % self.scale)), 0:(height - (height % self.scale)), :]
-        img = cv2.resize(cropped, None, fx=1. / self.scale, fy=1. / self.scale, interpolation=cv2.INTER_CUBIC)
-        
-        # to ycrcb and normalize
-        img_ycc = cv2.cvtColor(img, cv2.COLOR_BGR2YCrCb)
-        img_y = img_ycc[:,:,0]
-        floatimg = img_y.astype(np.float32) / 255.0
-        
-        LR_input_ = floatimg.reshape(1, floatimg.shape[0], floatimg.shape[1], 1)
+        dirs = os.listdir(path)
+        for dir in dirs:
+            dir_path = os.path.join(path, dir)
+            for file in os.listdir(dir_path):
+                LR_path = os.path.join(dir_path, file)
+                print('Procesing on: ', LR_path)
 
-        with tf.Session(config=self.config) as sess:
-            print("\nTest model with psnr:\n")
-            # load the model
-            ckpt_name = self.ckpt_path + "fsrcnn_ckpt" + ".meta"
-            saver = tf.train.import_meta_graph(ckpt_name)
-            saver.restore(sess, tf.train.latest_checkpoint(self.ckpt_path))
-            graph_def = sess.graph
-            LR_tensor = graph_def.get_tensor_by_name("IteratorGetNext:0")
-            HR_tensor = graph_def.get_tensor_by_name("NHWC_output:0")
+                img = cv2.imread(LR_path, 3)
 
-            output = sess.run(HR_tensor, feed_dict={LR_tensor: LR_input_})
+                # to ycrcb and normalize
+                img_ycc = cv2.cvtColor(img, cv2.COLOR_BGR2YCrCb)
+                img_y = img_ycc[:,:,0]
+                floatimg = img_y.astype(np.float32) / 255.0
+                
+                LR_input_ = floatimg.reshape(1, floatimg.shape[0], floatimg.shape[1], 1)
 
-            # post-process
-            Y = output[0]
-            Y = (Y * 255.0).clip(min=0, max=255)
-            Y = (Y).astype(np.uint8)
+                with tf.Session(config=self.config) as sess:
+                    saver = tf.train.import_meta_graph(ckpt_name)
+                    saver.restore(sess, tf.train.latest_checkpoint(self.ckpt_path))
+                    graph_def = sess.graph
+                    LR_tensor = graph_def.get_tensor_by_name("IteratorGetNext:0")
+                    HR_tensor = graph_def.get_tensor_by_name("NHWC_output:0")
 
-            # Merge with Chrominance channels Cr/Cb
-            Cr = np.expand_dims(cv2.resize(img_ycc[:,:,1], None, fx=self.scale, fy=self.scale, interpolation=cv2.INTER_CUBIC), axis=2)
-            Cb = np.expand_dims(cv2.resize(img_ycc[:,:,2], None, fx=self.scale, fy=self.scale, interpolation=cv2.INTER_CUBIC), axis=2)
-            HR_image = (cv2.cvtColor(np.concatenate((Y, Cr, Cb), axis=2), cv2.COLOR_YCrCb2BGR))
+                    output = sess.run(HR_tensor, feed_dict={LR_tensor: LR_input_})
 
-            bicubic_image = cv2.resize(img, None, fx=self.scale, fy=self.scale, interpolation=cv2.INTER_CUBIC)
+                    # post-process
+                    Y = output[0]
+                    Y = (Y * 255.0).clip(min=0, max=255)
+                    Y = (Y).astype(np.uint8)
 
-            print("PSNR of fsrcnn  upscaled image: {}".format(self.psnr(cropped, HR_image)))
-            print("PSNR of bicubic upscaled image: {}".format(self.psnr(cropped, bicubic_image)))
+                    # Merge with Chrominance channels Cr/Cb
+                    Cr = np.expand_dims(cv2.resize(img_ycc[:,:,1], None, fx=self.scale, fy=self.scale, interpolation=cv2.INTER_CUBIC), axis=2)
+                    Cb = np.expand_dims(cv2.resize(img_ycc[:,:,2], None, fx=self.scale, fy=self.scale, interpolation=cv2.INTER_CUBIC), axis=2)
+                    HR_image = (cv2.cvtColor(np.concatenate((Y, Cr, Cb), axis=2), cv2.COLOR_YCrCb2BGR))
 
-            cv2.imshow('Original image', fullimg)
-            cv2.imshow('HR image', HR_image)
-            cv2.imshow('Bicubic HR image', bicubic_image)
-            
-            cv2.imwrite("./images/fsrcnnOutput.png", HR_image)
-            cv2.imwrite("./images/bicubicOutput.png", bicubic_image)
-            cv2.imwrite("./images/original.png", fullimg)
-            cv2.imwrite("./images/input.png", img)
-            
-            cv2.waitKey(0)
+                    #bicubic_image = cv2.resize(img, None, fx=self.scale, fy=self.scale, interpolation=cv2.INTER_CUBIC)
+                    dir_savepath = os.path.join(self.output_path, dir)
+                    if not os.path.exists(dir_savepath):
+                        os.makedirs(dir_savepath)
+                    image_path = os.path.join(dir_savepath, file)
+
+                    cv2.imwrite(image_path, HR_image)
+
         sess.close()
         
     def load_pb(self, path_to_pb):
@@ -230,68 +236,75 @@ class run:
             return graph
 
     def testFromPb(self, path):
+        pretrain_path = "./models_pretrain/"
+        train_path = "./models/"
+        modelpath = pretrain_path
+
         # Read model
-        pbPath = "./models/FSRCNN_x{}.pb".format(self.scale)
+        pbPath = modelpath + "FSRCNN_x{}.pb".format(self.scale)
         if self.smallFlag:
-            pbPath = "./models/FSRCNN-small_x{}.pb".format(self.scale)
+            pbPath = modelpath + "FSRCNN-small_x{}.pb".format(self.scale)
 
         # Get graph
         graph = self.load_pb(pbPath)
 
-        fullimg = cv2.imread(path, 3)
-        width = fullimg.shape[0]
-        height = fullimg.shape[1]
+        dirs = os.listdir(path)
+        for dir in dirs:
+            dir_path = os.path.join(path, dir)
+            for file in os.listdir(dir_path):
+                LR_path = os.path.join(dir_path, file)
+                print('Procesing on: ', LR_path)
 
-        cropped = fullimg[0:(width - (width % self.scale)), 0:(height - (height % self.scale)), :]
-        img = cv2.resize(cropped, None, fx=1. / self.scale, fy=1. / self.scale, interpolation=cv2.INTER_CUBIC)
-        
-        # to ycrcb and normalize
-        img_ycc = cv2.cvtColor(img, cv2.COLOR_BGR2YCrCb)
-        img_y = img_ycc[:,:,0]
-        floatimg = img_y.astype(np.float32) / 255.0
-        
-        LR_input_ = floatimg.reshape(1, floatimg.shape[0], floatimg.shape[1], 1)
+                fullimg = cv2.imread(LR_path, 3)
+                # width = fullimg.shape[0]
+                # height = fullimg.shape[1]
+                #cropped = fullimg[0:(width - (width % self.scale)), 0:(height - (height % self.scale)), :]
+                #img = cv2.resize(cropped, None, fx=1. / self.scale, fy=1. / self.scale, interpolation=cv2.INTER_CUBIC)
+                img = fullimg
 
-        LR_tensor = graph.get_tensor_by_name("IteratorGetNext:0")
-        HR_tensor = graph.get_tensor_by_name("NHWC_output:0")
+                # to ycrcb and normalize
+                img_ycc = cv2.cvtColor(img, cv2.COLOR_BGR2YCrCb)
+                img_y = img_ycc[:,:,0]
+                floatimg = img_y.astype(np.float32) / 255.0
+                
+                LR_input_ = floatimg.reshape(1, floatimg.shape[0], floatimg.shape[1], 1)
 
-        with tf.Session(graph=graph) as sess:
-            print("Loading pb...")
-            output = sess.run(HR_tensor, feed_dict={LR_tensor: LR_input_})
-            
-            # post-process
-            Y = output[0]
-            Y = (Y * 255.0).clip(min=0, max=255)
-            Y = (Y).astype(np.uint8)
+                LR_tensor = graph.get_tensor_by_name("IteratorGetNext:0")
+                HR_tensor = graph.get_tensor_by_name("NHWC_output:0")
 
-            # Merge with Chrominance channels Cr/Cb
-            Cr = np.expand_dims(cv2.resize(img_ycc[:,:,1], None, fx=self.scale, fy=self.scale, interpolation=cv2.INTER_CUBIC), axis=2)
-            Cb = np.expand_dims(cv2.resize(img_ycc[:,:,2], None, fx=self.scale, fy=self.scale, interpolation=cv2.INTER_CUBIC), axis=2)
-            HR_image = (cv2.cvtColor(np.concatenate((Y, Cr, Cb), axis=2), cv2.COLOR_YCrCb2BGR))
+                with tf.Session(graph=graph) as sess:
+                    print("Loading pb...")
+                    output = sess.run(HR_tensor, feed_dict={LR_tensor: LR_input_})
+                    
+                    # post-process
+                    Y = output[0]
+                    Y = (Y * 255.0).clip(min=0, max=255)
+                    Y = (Y).astype(np.uint8)
 
-            bicubic_image = cv2.resize(img, None, fx=self.scale, fy=self.scale, interpolation=cv2.INTER_CUBIC)
+                    # Merge with Chrominance channels Cr/Cb
+                    Cr = np.expand_dims(cv2.resize(img_ycc[:,:,1], None, fx=self.scale, fy=self.scale, interpolation=cv2.INTER_CUBIC), axis=2)
+                    Cb = np.expand_dims(cv2.resize(img_ycc[:,:,2], None, fx=self.scale, fy=self.scale, interpolation=cv2.INTER_CUBIC), axis=2)
+                    HR_image = (cv2.cvtColor(np.concatenate((Y, Cr, Cb), axis=2), cv2.COLOR_YCrCb2BGR))
 
-            print("PSNR of FSRCNN  upscaled image: {}".format(self.psnr(cropped, HR_image)))
-            print("PSNR of bicubic upscaled image: {}".format(self.psnr(cropped, bicubic_image)))
+                    #bicubic_image = cv2.resize(img, None, fx=self.scale, fy=self.scale, interpolation=cv2.INTER_CUBIC)
 
-            cv2.imshow('Original image', fullimg)
-            cv2.imshow('FSRCNN upscaled image', HR_image)
-            cv2.imshow('Bicubic upscaled image', bicubic_image)
+                    #print("PSNR of FSRCNN  upscaled image: {}".format(self.psnr(cropped, HR_image)))
+                    #print("PSNR of bicubic upscaled image: {}".format(self.psnr(cropped, bicubic_image)))
 
-            cv2.imwrite("./images/fsrcnnOutput.png", HR_image)
-            cv2.imwrite("./images/bicubicOutput.png", bicubic_image)
-            cv2.imwrite("./images/original.png", fullimg)
-            cv2.imwrite("./images/input.png", img)
+                    dir_savepath = os.path.join(self.output_path, dir)
+                    if not os.path.exists(dir_savepath):
+                        os.makedirs(dir_savepath)
+                    image_path = os.path.join(dir_savepath, file)
 
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
+                    cv2.imwrite(image_path, HR_image)
 
         sess.close()
     
     def export(self):
+        export_path = "export_pbmodel"
 
-        if not os.path.exists("./models"):
-            os.makedirs("./models")
+        if not os.path.exists(export_path):
+            os.makedirs(export_path)
 
         print("Exporting model...")
 
@@ -317,9 +330,9 @@ class run:
 
                 graph_def = TransformGraph(graph_def, ["IteratorGetNext"], ["NCHW_output"], ["sort_by_execution_order"])
 
-                pb_filename = "./models/FSRCNN_x{}.pb".format(self.scale)
+                pb_filename = export_path + "/FSRCNN_x{}.pb".format(self.scale)
                 if self.smallFlag:
-                    pb_filename = "./models/FSRCNN-small_x{}.pb".format(self.scale)
+                    pb_filename = export_path + "/FSRCNN-small_x{}.pb".format(self.scale)
                 
                 with tf.gfile.FastGFile(pb_filename, 'wb') as f:
                     f.write(graph_def.SerializeToString())
