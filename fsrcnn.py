@@ -77,7 +77,7 @@ def model(x, y, lr_size, scale, batch, lr, d, s, m):
     # loss = tf.losses.mean_squared_error(out, y)
     #l1 loss
     loss = tf.reduce_mean(tf.reduce_sum(10*tf.abs(out - y), reduction_indices=0))
-    loss += 1 - tf.reduce_mean(tf.image.ssim(y, out, max_val=1.0)) #addby hukunlei 20210712
+    loss += 4*(1 - tf.reduce_mean(tf.image.ssim(y, out, max_val=1.0))) #addby hukunlei 20210712
 
     train_op = tf.train.AdamOptimizer(learning_rate=lr).minimize(loss)
     return out, loss, train_op, psnr

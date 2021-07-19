@@ -90,7 +90,6 @@ ENV/
 
 # project files
 checkpoint*
-./logs
-CKPT*
+logs
 models*
-./images
+images

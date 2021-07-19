@@ -104,10 +104,19 @@ class run:
                                 os.makedirs(self.ckpt_path)
                             else:
                                 save_path = saver.save(sess, self.ckpt_path + "fsrcnn_ckpt")  
-                                print("Step nr: [{}/{}] - Loss: {:.5f}".format(step, "?", float(train_loss/step)))
+                                #print("Step nr: [{}/{}] - Loss: {:.5f}".format(step, "?", float(train_loss/step)))
                         
+                        tot_val_psnr, val_im_cntr = 0, 0
+                        val_psnr = sess.run([psnr], feed_dict={handle:train_val_handle})
+                        tot_val_psnr += val_psnr[0]
+                        val_im_cntr += 1
                         if step % 100 == 1:
-                            print("Epoch number: [{}/{}] - Loss: {:.5f}".format(e, self.epochs, float(train_loss/step)))
+                            print("Epoch number: [{}/{}] - Step nr: [[{}/{}] - Loss: {:.5f} - val PSNR: {:.3f}".format(
+                                                                                        e, self.epochs,
+                                                                                        step, 4000,
+                                                                                        float(train_loss/step),
+                                                                                        (tot_val_psnr[0] / val_im_cntr)))
+
                         step += 1
                         
                     except tf.errors.OutOfRangeError:

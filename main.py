@@ -21,8 +21,8 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "6"
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--train', type=str, default=False, help='Train the model')
-    parser.add_argument('--test', type=str, default=True, help='Run tests on the model')
+    parser.add_argument('--train', type=str, default=True, help='Train the model')
+    parser.add_argument('--test', type=str, default=False, help='Run tests on the model')
     parser.add_argument('--export', type=str, default=True, help='Export the model as .pb')
     parser.add_argument('--load_flag', type=str, default=False, help='Load previous model for training')
     parser.add_argument('--finetune', type=str, default=False, help='Finetune model on General100 dataset')
@@ -31,7 +31,7 @@ if __name__ == "__main__":
     parser.add_argument('--scale', type=int, help='Scaling factor of the model', default=4)
     parser.add_argument('--batch', type=int, help='Batch size of the training', default=8)
     parser.add_argument('--patch_size', type=int, help='cropped patch size of the image', default=128)
-    parser.add_argument('--epochs', type=int, help='Number of epochs during training', default=10)
+    parser.add_argument('--epochs', type=int, help='Number of epochs during training', default=300)
     parser.add_argument('--lr', type=float, help='Learning_rate', default=0.001)
     parser.add_argument('--d', type=int, help='Variable for d', default=56)
     parser.add_argument('--s', type=int, help='Variable for s', default=12)
@@ -42,8 +42,8 @@ if __name__ == "__main__":
     parser.add_argument('--validdir', type=str, default='./images/', help='Path to validation images')
     #parser.add_argument('--image', type=str, default="/data1/hukunlei/result/validation/sr_0415", help='Specify test image')
     parser.add_argument('--image', type=str, default="/data1/hukunlei/result/validation/d_realsr_3w/", help='Specify test image')
-    parser.add_argument('--output_path', type=str, default="/data1/hukunlei/result/output/newfsr-real3w-l1", help='Path to test output')
-    parser.add_argument('--ckpt_path', type=str, default="./CKPT_dir_l1/", help='model output path')\
+    parser.add_argument('--output_path', type=str, default="/data1/hukunlei/result/output/CKPT_dir_sratch", help='Path to test output')
+    parser.add_argument('--ckpt_path', type=str, default="./CKPT_dir_sratch/", help='model output path')\
     #"./CKPT_dir_l2/" "./CKPT_dir_l1/" "./CKPT_dir_scratch/"          "./CKPT_dir_pretrain/"
     
     args = parser.parse_args()
