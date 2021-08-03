@@ -30,7 +30,7 @@ def img_aug(input_img, gt_img):
             
     return input_img, gt_img
 
-def make_dataset(paths, patch_size):
+def make_dataset(paths, patch_size, scale):
     """
     Python generator-style dataset. Creates low-res and corresponding high-res patches. 
     discarding the original image generate and save style, directly feed the augmented data to the network
@@ -46,9 +46,12 @@ def make_dataset(paths, patch_size):
         back_name = os.path.split(p)[1]
         _x1_position = back_name.find('_x1')
         fore_name = back_name[:_x1_position]
+        if scale == 4:
+            hr_p = hr_p_pre + '/HR/' +  fore_name +'_x4' +  '_' + back_name.split('_')[-1]
+        if scale == 2:
+            hr_p = hr_p_pre + '/HR/' +  fore_name +'_x2' +  '_' + back_name.split('_')[-1]
+        # print('LR: ', p, '  HR: ', hr_p)
 
-        hr_p = hr_p_pre + '/HR/' +  fore_name +'_x4' +  '_' + back_name.split('_')[-1]
-        #print('LR: ', p, '  HR: ', hr_p)
         hr_im = cv2.imread(hr_p, 3).astype(np.float32)
         
         # convert to YCrCb (cv2 reads images in BGR!), and normalize
@@ -65,11 +68,11 @@ def make_dataset(paths, patch_size):
             x = np.random.randint(0, max_x)
             y = np.random.randint(0, max_y)
             input_img = lr[y: y + patch_size, x: x + patch_size]
-            gt_img = hr[y * 4: y * 4 + patch_size * 4, x * 4: x * 4 + patch_size * 4]
+            gt_img = hr[y * scale: y * scale + patch_size * scale, x * scale: x * scale + patch_size * scale]
 
         input_img, gt_img = img_aug(input_img, gt_img)
         lr = input_img.reshape((patch_size, patch_size, 1))
-        hr = gt_img.reshape((patch_size*4, patch_size*4, 1))
+        hr = gt_img.reshape((patch_size*scale, patch_size*scale, 1))
         yield lr, hr
 
 

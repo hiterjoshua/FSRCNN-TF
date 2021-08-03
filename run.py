@@ -38,7 +38,7 @@ class run:
         train_dataset = tf.data.Dataset.from_generator(generator=data_utils.make_dataset, 
                                                  output_types=(tf.float32, tf.float32), 
                                                  output_shapes=(tf.TensorShape([None, None, 1]), tf.TensorShape([None, None, 1])),
-                                                 args=[image_paths, self.patch_size])
+                                                 args=[image_paths, self.patch_size, self.scale])
         train_dataset = train_dataset.padded_batch(self.batch, padded_shapes=([None, None, 1],[None, None, 1]))
         
         # Create validation dataset
@@ -70,13 +70,13 @@ class run:
             train_writer = tf.summary.FileWriter('./logs/train', sess.graph)
             sess.run(tf.global_variables_initializer())
             
-            saver = tf.train.Saver()
+            saver = tf.train.Saver(max_to_keep=50)
             
             # Create check points directory if not existed, and load previous model if specified.
             if not os.path.exists(self.ckpt_path_pretrain):
                 os.makedirs(self.ckpt_path_pretrain)
             else:
-                if os.path.isfile(self.ckpt_path_pretrain + "fsrcnn_ckpt" + ".meta"):
+                if os.path.isfile(self.ckpt_path_pretrain + "110_fsrcnn_ckpt" + ".meta"):
                     if self.load_flag:
                         saver.restore(sess, tf.train.latest_checkpoint(self.ckpt_path_pretrain))
                         print("Loaded checkpoint.")
@@ -116,7 +116,8 @@ class run:
                                                                                         step, 4000,
                                                                                         float(train_loss/step),
                                                                                         (tot_val_psnr[0] / val_im_cntr)))
-
+                        if e % 10 == 0:
+                            save_path = saver.save(sess, self.ckpt_path + str(e) +  "_fsrcnn_ckpt")   
                         step += 1
                         
                     except tf.errors.OutOfRangeError:
@@ -189,7 +190,7 @@ class run:
         Test single image and calculate psnr.
         """
         # load the model
-        ckpt_name = self.ckpt_path + "fsrcnn_ckpt" + ".meta"
+        ckpt_name = self.ckpt_path + "220_fsrcnn_ckpt" + ".meta"
 
         dirs = os.listdir(path)
         for dir in dirs:

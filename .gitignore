@@ -93,3 +93,6 @@ checkpoint*
 logs
 models*
 images
+CKPT_dir*
+export_pbmodel*
+
