@@ -5,7 +5,7 @@ import numpy as np
 import math
 import data_utils
 from skimage import io
-import fsrcnn
+import fsrcnn, slim_fsr 
 from PIL import Image
 
 from tensorflow.python.tools import freeze_graph
@@ -190,7 +190,7 @@ class run:
         Test single image and calculate psnr.
         """
         # load the model
-        ckpt_name = self.ckpt_path + "220_fsrcnn_ckpt" + ".meta"
+        ckpt_name = self.ckpt_path + "170_fsrcnn_ckpt" + ".meta"
 
         dirs = os.listdir(path)
         for dir in dirs:
@@ -323,7 +323,7 @@ class run:
             with tf.Session(config=self.config) as sess:
                 
                 ### Restore checkpoint
-                ckpt_name = self.ckpt_path + "fsrcnn_ckpt" + ".meta"
+                ckpt_name = self.ckpt_path + "230_fsrcnn_ckpt" + ".meta"
                 saver = tf.train.import_meta_graph(ckpt_name)
                 saver.restore(sess, tf.train.latest_checkpoint(self.ckpt_path))
 
@@ -348,6 +348,28 @@ class run:
                     f.write(graph_def.SerializeToString())
 
                 tf.train.write_graph(graph_def, ".", 'train.pbtxt')
+
+    def fixed_export(self):
+        # load the model
+        ckpt_name = self.ckpt_path + "200_fsrcnn_ckpt" 
+        LR_tensor = tf.placeholder(tf.float32, shape=(1, 800, 1000, 1), name="IteratorGetNext")
+        output_node_names = "NHWC_output_1"
+        out = slim_fsr.model(LR_tensor, self.scale, *self.fsrcnn_params)
+        LR_input_ = np.random.randn(1,800,1000,1)
+
+        saver = tf.train.Saver()
+        with tf.Session(config=self.config) as sess:
+            sess.run(tf.global_variables_initializer())
+            saver.restore(sess, ckpt_name)
+            output = sess.run(out, feed_dict={LR_tensor: LR_input_})
+
+            constant_graph = tf.graph_util.convert_variables_to_constants(sess, \
+                                sess.graph_def, \
+                                output_node_names=output_node_names.split("/"))
+            constant_graph = tf.graph_util.remove_training_nodes(constant_graph)
+            
+            with tf.gfile.GFile('./export_pbmodel/model_fixed.pb', mode='wb') as f:
+                f.write(constant_graph.SerializeToString())
 
     def psnr(self, img1, img2):
         mse = np.mean( (img1 - img2) ** 2 )

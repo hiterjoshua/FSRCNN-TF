@@ -1,10 +1,9 @@
 # FSRCNN_Tensorflow
-
 TensorFlow implementation of [Accelerating the Super-Resolution Convolutional Neural Network](http://mmlab.ie.cuhk.edu.hk/projects/FSRCNN.html) [1].
 
 This implementation replaces the transpose conv2d layer by a sub-pixel layer [2]. 
 
-Includes pretrained models for scales x2, x3 and x4. Which were trained on Real3w dataset, and will finetune in very close future.
+Includes pretrained models for scales x2, x3 and x4. Which were trained on T91-image dataset, and finetuned on General100 dataset.
 
 ## Google Summer of Code with OpenCV
 This repository was made during the 2019 GSoC program for the organization OpenCV. The [trained models (.pb files)](https://github.com/Saafke/FSRCNN_Tensorflow/tree/master/models/) in this repo can easily be used for inference in OpenCV with the ['dnn_superres' module](https://github.com/opencv/opencv_contrib/tree/master/modules/dnn_superres). See the OpenCV documentation for how to do this.
@@ -15,8 +14,6 @@ This repository was made during the 2019 GSoC program for the organization OpenC
 - Numpy
 - cv2
 - imutils
-- tqdm
-For a quick start, you can use docker 10.101.100.13, tf_cuda10 to reproduce the work in this repo.
 
 # Running
 

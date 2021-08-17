@@ -12,7 +12,7 @@ import numpy
 from tensorflow.python.client import device_lib
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' #gets rid of avx/fma warning
-os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 # TODO: 
 # Overlapping patches
@@ -22,7 +22,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--train', type=str, default=False, help='Train the model')
-    parser.add_argument('--test', type=str, default=True, help='Run tests on the model')
+    parser.add_argument('--test', type=str, default=False, help='Run tests on the model')
     parser.add_argument('--export', type=str, default=True, help='Export the model as .pb')
     parser.add_argument('--load_flag', type=str, default=True, help='Load previous model for training')
     parser.add_argument('--finetune', type=str, default=False, help='Finetune model on General100 dataset')
@@ -39,12 +39,12 @@ if __name__ == "__main__":
     
     parser.add_argument('--traindir', type=str, default="/data1/datasets/d_realsr_3w/LR/", help='Path to train images')
     parser.add_argument('--ckpt_path', type=str, default="./CKPT_dir_sratch_5layers_x4/", help='model output path')\
-    #"./CKPT_dir_l2/" "./CKPT_dir_l1/" "./CKPT_dir_scratch/"          "./CKPT_dir_pretrain/"
+    #"./CKPT_dir_l2/" "./CKPT_dir_l1/" "./CKPT_dir_sratch/"  "./CKPT_dir_scratch_step/" "./CKPT_dir_pretrain/"
     parser.add_argument('--finetunedir', type=str, default='/data1/datasets/d_realsr_3w/', help='Path to finetune images')
     parser.add_argument('--validdir', type=str, default='./images/', help='Path to validation images')
     #parser.add_argument('--image', type=str, default="/data1/hukunlei/result/validation/sr_0415", help='Specify test image')
     parser.add_argument('--image', type=str, default="/data1/hukunlei/result/validation/d_realsr_3w/", help='Specify test image')
-    parser.add_argument('--output_path', type=str, default="/data1/hukunlei/result/output/CKPT_dir_5layers_x4_220", help='Path to test output')
+    parser.add_argument('--output_path', type=str, default="/data1/hukunlei/result/output/CKPT_dir_5layers_x2_170", help='Path to test output')
 
     
     args = parser.parse_args()
@@ -107,11 +107,12 @@ if __name__ == "__main__":
         run.train(args.traindir)
 
     if args.test:
-        #run.testFromPb(args.image)
+        # run.testFromPb(args.image)
         run.test(args.image)
-        #run.upscale(args.image)
+        # run.upscale(args.image)
 
     if args.export:
-        run.export()
+        #run.export()
+        run.fixed_export()
     
     print("I ran successfully.")
