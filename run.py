@@ -70,16 +70,18 @@ class run:
             train_writer = tf.summary.FileWriter('./logs/train', sess.graph)
             sess.run(tf.global_variables_initializer())
             
-            saver = tf.train.Saver(max_to_keep=50)
+            saver = tf.train.Saver(max_to_keep=100)
             
             # Create check points directory if not existed, and load previous model if specified.
             if not os.path.exists(self.ckpt_path_pretrain):
                 os.makedirs(self.ckpt_path_pretrain)
             else:
-                if os.path.isfile(self.ckpt_path_pretrain + "110_fsrcnn_ckpt" + ".meta"):
+                ckpt_name = self.ckpt_path_pretrain + "300_fsrcnn_ckpt"
+                if os.path.isfile(ckpt_name + ".meta"):
                     if self.load_flag:
-                        saver.restore(sess, tf.train.latest_checkpoint(self.ckpt_path_pretrain))
-                        print("Loaded checkpoint.")
+                        #saver.restore(sess, tf.train.latest_checkpoint(self.ckpt_path_pretrain))
+                        saver.restore(sess, ckpt_name)
+                        print(ckpt_name, "checkpoint Loaded.")
                     if not self.load_flag:
                         print("No checkpoint loaded. Training from scratch.")
                 else:
@@ -210,7 +212,7 @@ class run:
 
                 with tf.Session(config=self.config) as sess:
                     saver = tf.train.import_meta_graph(ckpt_name)
-                    saver.restore(sess, tf.train.latest_checkpoint(self.ckpt_path))
+                    saver.restore(sess, ckpt_name)
                     graph_def = sess.graph
                     LR_tensor = graph_def.get_tensor_by_name("IteratorGetNext:0")
                     HR_tensor = graph_def.get_tensor_by_name("NHWC_output:0")
@@ -351,17 +353,18 @@ class run:
 
     def fixed_export(self):
         # load the model
-        ckpt_name = self.ckpt_path + "200_fsrcnn_ckpt" 
-        LR_tensor = tf.placeholder(tf.float32, shape=(1, 800, 1000, 1), name="IteratorGetNext")
-        output_node_names = "NHWC_output_1"
+        ckpt_name = self.ckpt_path + "300_fsrcnn_ckpt" 
+        LR_tensor = tf.placeholder(tf.float32, shape=(1, 748, 1000, 1), name="IteratorGetNext")
+        output_node_names = "NHWC_output"
         out = slim_fsr.model(LR_tensor, self.scale, *self.fsrcnn_params)
-        LR_input_ = np.random.randn(1,800,1000,1)
+        LR_input_ = np.random.randn(1,748,1000,1)
 
         saver = tf.train.Saver()
         with tf.Session(config=self.config) as sess:
             sess.run(tf.global_variables_initializer())
             saver.restore(sess, ckpt_name)
             output = sess.run(out, feed_dict={LR_tensor: LR_input_})
+            print(out.name)
 
             constant_graph = tf.graph_util.convert_variables_to_constants(sess, \
                                 sess.graph_def, \

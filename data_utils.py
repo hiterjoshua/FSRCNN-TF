@@ -50,6 +50,8 @@ def make_dataset(paths, patch_size, scale):
             hr_p = hr_p_pre + '/HR/' +  fore_name +'_x4' +  '_' + back_name.split('_')[-1]
         if scale == 2:
             hr_p = hr_p_pre + '/HR/' +  fore_name +'_x2' +  '_' + back_name.split('_')[-1]
+        #used when we train on tmo datasets
+        hr_p = hr_p_pre + '/HR/' + p.split('/')[-1]
         # print('LR: ', p, '  HR: ', hr_p)
 
         hr_im = cv2.imread(hr_p, 3).astype(np.float32)

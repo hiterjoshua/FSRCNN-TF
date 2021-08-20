@@ -12,7 +12,7 @@ import numpy
 from tensorflow.python.client import device_lib
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' #gets rid of avx/fma warning
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+os.environ["CUDA_VISIBLE_DEVICES"] = "4,5,6,7"
 
 # TODO: 
 # Overlapping patches
@@ -21,9 +21,9 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--train', type=str, default=False, help='Train the model')
+    parser.add_argument('--train', type=str, default=True, help='Train the model')
     parser.add_argument('--test', type=str, default=False, help='Run tests on the model')
-    parser.add_argument('--export', type=str, default=True, help='Export the model as .pb')
+    parser.add_argument('--export', type=str, default=False, help='Export the model as .pb')
     parser.add_argument('--load_flag', type=str, default=True, help='Load previous model for training')
     parser.add_argument('--finetune', type=str, default=False, help='Finetune model on General100 dataset')
     parser.add_argument('--small', help='Run FSRCNN-small', action="store_true")
@@ -37,8 +37,8 @@ if __name__ == "__main__":
     parser.add_argument('--s', type=int, help='Variable for s', default=12)
     parser.add_argument('--m', type=int, help='Variable for m', default=1) #4 for 9layers and 1 for 5layers
     
-    parser.add_argument('--traindir', type=str, default="/data1/datasets/d_realsr_3w/LR/", help='Path to train images')
-    parser.add_argument('--ckpt_path', type=str, default="./CKPT_dir_sratch_5layers_x4/", help='model output path')\
+    parser.add_argument('--traindir', type=str, default="/data1/datasets/CFEE7_grass_0512/LR/", help='Path to train images')
+    parser.add_argument('--ckpt_path', type=str, default="./CKPT_dir_tmo_tlayers_x4/", help='model output path')\
     #"./CKPT_dir_l2/" "./CKPT_dir_l1/" "./CKPT_dir_sratch/"  "./CKPT_dir_scratch_step/" "./CKPT_dir_pretrain/"
     parser.add_argument('--finetunedir', type=str, default='/data1/datasets/d_realsr_3w/', help='Path to finetune images')
     parser.add_argument('--validdir', type=str, default='./images/', help='Path to validation images')
@@ -80,7 +80,7 @@ if __name__ == "__main__":
         if small:
             ckpt_path_pretrain = "./CKPT_dir_pretrain/x3_small/"
     elif scale == 4:
-        ckpt_path_pretrain = "./CKPT_dir_sratch_step/"   #load previous model and relay training
+        ckpt_path_pretrain = "./CKPT_dir_sratch_5layers_x4/"   #load previous model and relay training
         if small:
             ckpt_path_pretrain = "./CKPT_dir_pretrain/x4_small/"
     else:
