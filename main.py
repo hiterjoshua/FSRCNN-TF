@@ -12,7 +12,7 @@ import numpy
 from tensorflow.python.client import device_lib
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' #gets rid of avx/fma warning
-os.environ["CUDA_VISIBLE_DEVICES"] = "4,5,6,7"
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
 # TODO: 
 # Overlapping patches
@@ -32,19 +32,19 @@ if __name__ == "__main__":
     parser.add_argument('--batch', type=int, help='Batch size of the training', default=8)
     parser.add_argument('--patch_size', type=int, help='cropped patch size of the image', default=128)
     parser.add_argument('--epochs', type=int, help='Number of epochs during training', default=300)
-    parser.add_argument('--lr', type=float, help='Learning_rate', default=0.001)
+    parser.add_argument('--lr', type=float, help='Learning_rate', default=0.00001) #pretrain 0.001
     parser.add_argument('--d', type=int, help='Variable for d', default=56)
     parser.add_argument('--s', type=int, help='Variable for s', default=12)
     parser.add_argument('--m', type=int, help='Variable for m', default=1) #4 for 9layers and 1 for 5layers
     
     parser.add_argument('--traindir', type=str, default="/data1/datasets/CFEE7_grass_0512/LR/", help='Path to train images')
-    parser.add_argument('--ckpt_path', type=str, default="./CKPT_dir_tmo_tlayers_x4/", help='model output path')\
+    parser.add_argument('--ckpt_path', type=str, default="./CKPT_dir_tmo_5layers_x4_lowlr/", help='model output path')\
     #"./CKPT_dir_l2/" "./CKPT_dir_l1/" "./CKPT_dir_sratch/"  "./CKPT_dir_scratch_step/" "./CKPT_dir_pretrain/"
-    parser.add_argument('--finetunedir', type=str, default='/data1/datasets/d_realsr_3w/', help='Path to finetune images')
+    parser.add_argument('--finetunedir', type=str, default='/data1/datasets/sr_0415/', help='Path to finetune images')
     parser.add_argument('--validdir', type=str, default='./images/', help='Path to validation images')
     #parser.add_argument('--image', type=str, default="/data1/hukunlei/result/validation/sr_0415", help='Specify test image')
-    parser.add_argument('--image', type=str, default="/data1/hukunlei/result/validation/d_realsr_3w/", help='Specify test image')
-    parser.add_argument('--output_path', type=str, default="/data1/hukunlei/result/output/CKPT_dir_5layers_x2_170", help='Path to test output')
+    parser.add_argument('--image', type=str, default="/data1/hukunlei/result/validation/sr_0415/", help='Specify test image')
+    parser.add_argument('--output_path', type=str, default="/data1/hukunlei/result/output/CKPT_dir_tmo_5layers_x4_300-png", help='Path to test output')
 
     
     args = parser.parse_args()
@@ -70,7 +70,6 @@ if __name__ == "__main__":
         fsrcnn_params = (32, 5, 1)
 
     # Set checkpoint paths for different scales and models
-
     if scale == 2:
         ckpt_path_pretrain = "./CKPT_dir_pretrain/x2/"
         if small:

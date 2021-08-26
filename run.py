@@ -69,7 +69,6 @@ class run:
             
             train_writer = tf.summary.FileWriter('./logs/train', sess.graph)
             sess.run(tf.global_variables_initializer())
-            
             saver = tf.train.Saver(max_to_keep=100)
             
             # Create check points directory if not existed, and load previous model if specified.
@@ -105,21 +104,21 @@ class run:
                             if not os.path.exists(self.ckpt_path):
                                 os.makedirs(self.ckpt_path)
                             else:
-                                save_path = saver.save(sess, self.ckpt_path + "fsrcnn_ckpt")  
+                                saver.save(sess, self.ckpt_path + "fsrcnn_ckpt")  
                                 #print("Step nr: [{}/{}] - Loss: {:.5f}".format(step, "?", float(train_loss/step)))
                         
                         tot_val_psnr, val_im_cntr = 0, 0
                         val_psnr = sess.run([psnr], feed_dict={handle:train_val_handle})
                         tot_val_psnr += val_psnr[0]
-                        val_im_cntr += 1
-                        if step % 100 == 1:
+                        val_im_cntr += 1    
+                        if step % 30 == 1:
                             print("Epoch number: [{}/{}] - Step nr: [[{}/{}] - Loss: {:.5f} - val PSNR: {:.3f}".format(
                                                                                         e, self.epochs,
                                                                                         step, 4000,
                                                                                         float(train_loss/step),
                                                                                         (tot_val_psnr[0] / val_im_cntr)))
                         if e % 10 == 0:
-                            save_path = saver.save(sess, self.ckpt_path + str(e) +  "_fsrcnn_ckpt")   
+                            saver.save(sess, self.ckpt_path + str(e) +  "_fsrcnn_ckpt")   
                         step += 1
                         
                     except tf.errors.OutOfRangeError:
@@ -141,7 +140,7 @@ class run:
                                                                                       self.epochs,
                                                                                       float(train_loss/step),
                                                                                       (tot_val_psnr[0] / val_im_cntr)))
-                save_path = saver.save(sess, self.ckpt_path + "fsrcnn_ckpt")   
+                saver.save(sess, self.ckpt_path + "fsrcnn_ckpt")   
 
             print("Training finished.")
             train_writer.close()
@@ -192,7 +191,7 @@ class run:
         Test single image and calculate psnr.
         """
         # load the model
-        ckpt_name = self.ckpt_path + "170_fsrcnn_ckpt" + ".meta"
+        ckpt_name = self.ckpt_path + "300_fsrcnn_ckpt"
 
         dirs = os.listdir(path)
         for dir in dirs:
@@ -211,7 +210,7 @@ class run:
                 LR_input_ = floatimg.reshape(1, floatimg.shape[0], floatimg.shape[1], 1)
 
                 with tf.Session(config=self.config) as sess:
-                    saver = tf.train.import_meta_graph(ckpt_name)
+                    saver = tf.train.import_meta_graph(ckpt_name + ".meta")
                     saver.restore(sess, ckpt_name)
                     graph_def = sess.graph
                     LR_tensor = graph_def.get_tensor_by_name("IteratorGetNext:0")
@@ -234,7 +233,7 @@ class run:
                     if not os.path.exists(dir_savepath):
                         os.makedirs(dir_savepath)
                     image_path = os.path.join(dir_savepath, file)
-
+                    image_path = image_path.split('.jpg')[0] + '.png'
                     cv2.imwrite(image_path, HR_image)
 
         sess.close()
