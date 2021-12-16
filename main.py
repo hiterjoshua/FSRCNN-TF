@@ -12,7 +12,7 @@ import numpy
 from tensorflow.python.client import device_lib
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' #gets rid of avx/fma warning
-os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2,7"
 
 # TODO: 
 # Overlapping patches
@@ -21,8 +21,8 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--train', type=str, default=True, help='Train the model')
-    parser.add_argument('--test', type=str, default=False, help='Run tests on the model')
+    parser.add_argument('--train', type=str, default=False, help='Train the model')
+    parser.add_argument('--test', type=str, default=True, help='Run tests on the model')
     parser.add_argument('--export', type=str, default=False, help='Export the model as .pb')
     parser.add_argument('--load_flag', type=str, default=True, help='Load previous model for training')
     parser.add_argument('--finetune', type=str, default=False, help='Finetune model on General100 dataset')
@@ -31,20 +31,20 @@ if __name__ == "__main__":
     parser.add_argument('--scale', type=int, help='Scaling factor of the model', default=4)
     parser.add_argument('--batch', type=int, help='Batch size of the training', default=8)
     parser.add_argument('--patch_size', type=int, help='cropped patch size of the image', default=128)
-    parser.add_argument('--epochs', type=int, help='Number of epochs during training', default=300)
-    parser.add_argument('--lr', type=float, help='Learning_rate', default=0.00001) #pretrain 0.001
+    parser.add_argument('--epochs', type=int, help='Number of epochs during training', default=400)
+    parser.add_argument('--lr', type=float, help='Learning_rate', default=0.000005) #pretrain 0.001
     parser.add_argument('--d', type=int, help='Variable for d', default=56)
     parser.add_argument('--s', type=int, help='Variable for s', default=12)
     parser.add_argument('--m', type=int, help='Variable for m', default=1) #4 for 9layers and 1 for 5layers
     
-    parser.add_argument('--traindir', type=str, default="/data1/datasets/CFEE7_grass_0512/LR/", help='Path to train images')
-    parser.add_argument('--ckpt_path', type=str, default="./CKPT_dir_tmo_5layers_x4_lowlr/", help='model output path')\
+    parser.add_argument('--traindir', type=str, default="/data1/datasets/DSLR_word_grass_0512/LR/", help='Path to train images')
+    parser.add_argument('--ckpt_path', type=str, default="./CKPT_dir_scene_5layers_x4_lowlr400/", help='model output path')\
     #"./CKPT_dir_l2/" "./CKPT_dir_l1/" "./CKPT_dir_sratch/"  "./CKPT_dir_scratch_step/" "./CKPT_dir_pretrain/"
     parser.add_argument('--finetunedir', type=str, default='/data1/datasets/sr_0415/', help='Path to finetune images')
     parser.add_argument('--validdir', type=str, default='./images/', help='Path to validation images')
     #parser.add_argument('--image', type=str, default="/data1/hukunlei/result/validation/sr_0415", help='Specify test image')
-    parser.add_argument('--image', type=str, default="/data1/hukunlei/result/validation/sr_0415/", help='Specify test image')
-    parser.add_argument('--output_path', type=str, default="/data1/hukunlei/result/output/CKPT_dir_tmo_5layers_x4_300-png", help='Path to test output')
+    parser.add_argument('--image', type=str, default="/data1/hukunlei/result/validation/scenery/", help='Specify test image')
+    parser.add_argument('--output_path', type=str, default="/data1/hukunlei/result/output/CKPT_dir_scenery_5layers_x4_lowlr400_epo400", help='Path to test output')
 
     
     args = parser.parse_args()
@@ -79,7 +79,7 @@ if __name__ == "__main__":
         if small:
             ckpt_path_pretrain = "./CKPT_dir_pretrain/x3_small/"
     elif scale == 4:
-        ckpt_path_pretrain = "./CKPT_dir_sratch_5layers_x4/"   #load previous model and relay training
+        ckpt_path_pretrain = "./CKPT_dir_tmo_5layers_x4_lowlr_400/"   #load previous model and relay training
         if small:
             ckpt_path_pretrain = "./CKPT_dir_pretrain/x4_small/"
     else:

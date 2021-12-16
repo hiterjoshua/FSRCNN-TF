@@ -191,7 +191,7 @@ class run:
         Test single image and calculate psnr.
         """
         # load the model
-        ckpt_name = self.ckpt_path + "300_fsrcnn_ckpt"
+        ckpt_name = self.ckpt_path + "400_fsrcnn_ckpt"
 
         dirs = os.listdir(path)
         for dir in dirs:
@@ -370,7 +370,7 @@ class run:
                                 output_node_names=output_node_names.split("/"))
             constant_graph = tf.graph_util.remove_training_nodes(constant_graph)
             
-            with tf.gfile.GFile('./export_pbmodel/model_fixed.pb', mode='wb') as f:
+            with tf.gfile.GFile('./export_pbmodel/model_fixed_scene300.pb', mode='wb') as f:
                 f.write(constant_graph.SerializeToString())
 
     def psnr(self, img1, img2):
