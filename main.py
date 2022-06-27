@@ -1,7 +1,4 @@
 import tensorflow as tf
-import fsrcnn
-import data_utils
-import run
 import os
 import cv2
 import numpy as np
@@ -11,8 +8,12 @@ from PIL import Image
 import numpy
 from tensorflow.python.client import device_lib
 
+import fsrcnn
+import data_utils
+import run
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' #gets rid of avx/fma warning
-os.environ["CUDA_VISIBLE_DEVICES"] = "2,7"
+os.environ["CUDA_VISIBLE_DEVICES"] = "7"
 
 # TODO: 
 # Overlapping patches
@@ -21,7 +22,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "2,7"
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--train', type=str, default=False, help='Train the model')
+    parser.add_argument('--train', type=str, default=True, help='Train the model')
     parser.add_argument('--test', type=str, default=True, help='Run tests on the model')
     parser.add_argument('--export', type=str, default=False, help='Export the model as .pb')
     parser.add_argument('--load_flag', type=str, default=True, help='Load previous model for training')

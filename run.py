@@ -63,7 +63,11 @@ class run:
         else:
             print("\nRunning FSRCNN-small.")
         out, loss, train_op, psnr = fsrcnn.model(LR, HR, self.lr_size, self.scale, self.batch, self.lr, *self.fsrcnn_params)
-        
+         
+        variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
+        for v in variables:
+            print(v)
+
         # -- Training session
         with tf.Session(config=self.config) as sess:
             
